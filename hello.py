@@ -25,7 +25,10 @@ class Location(BaseModel):
 
 
 class Knowledge(BaseModel):
-    knowledge: Union[Location, Item]
+    knowledge: Location
+
+
+r
 
 
 class Information(BaseModel):
@@ -50,6 +53,62 @@ class Agent(BaseModel):
     current_location: str
     motivation: Union[SeekMotivation, BeHelpfulMotivation]
     knowledge: list[Knowledge]
+
+    def produce_next_action(self, available_actions: list[any]):
+        response = chat(
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Choose an action based on your current state, which is {self.model_dump_json()}",
+                }
+            ],
+            model=MODEL,
+            format=available_actions.model_json_schema(),
+            # stream=True,
+        )
+
+        return response["message"]["content"]
+
+    def receive_action(self):
+        # should update state
+        pass
+
+
+def possible_next_actions(agent: Agent):
+    available_agents_to_ask = Enum(
+        "available_agents_to_ask", {l.upper(): l for l in agent.known_agents}
+    )
+
+    valid_location_knowledge = Enum(
+        "valid_location_knowledge",
+        {l.item.type: l.item.type for l in agent.known_items},
+    )
+
+    valid_ask_actions = create_model(
+        "valid_ask_actions",
+        type=(Literal["ask_action"], "ask_action"),
+        agent_to_ask=(available_agents_to_ask, ...),
+        question_to_gain_knowledge_desired=(str, ...),
+        knowledge_desired=(valid_location_knowledge, ...),
+    )
+
+    available_travel_locations = Enum(
+        "available_travel_locations",
+        {l.upper(): l for l in agent.known_locations if l != agent.current_location},
+    )
+    valid_travel_actions = create_model(
+        "valid_travel_actions",
+        type=(Literal["travel_action"], "travel_action"),
+        location=(available_travel_locations, ...),
+    )
+
+    if len(agent.known_locations) > 1:
+        available_actions = Union[valid_travel_actions, valid_ask_actions]
+    else:
+        available_actions = valid_ask_actions
+
+    print(available_actions.model_json_schema())
+    return create_model("agent_actions", action=(available_actions, ...))
 
 
 def get_available_actions(agent: Agent):
@@ -109,24 +168,15 @@ def main():
         ],
     )
 
-    available_actions = get_available_actions(seeker_agent)
+    available_actions = possible_next_actions(seeker_agent)
+    response = seeker_agent.produce_next_action(available_actions)
+    print(response)
+    # available_actions = get_available_actions(seeker_agent)
 
-    print(available_actions.model_json_schema())
-    print(seeker_agent.model_dump_json())
+    # print(available_actions.model_json_schema())
+    # print(seeker_agent.model_dump_json())
 
-    response = chat(
-        messages=[
-            {
-                "role": "user",
-                "content": f"Choose an action based on your current state, which is {seeker_agent.model_dump_json()}",
-            }
-        ],
-        model=MODEL,
-        format=available_actions.model_json_schema(),
-        # stream=True,
-    )
-
-    selected_action = available_actions.parse_raw(response["message"]["content"])
+    selected_action = available_actions.model_validate_json(response)
     print(selected_action.model_dump_json())
 
     # if response = {"action": "type": "ask_action"}
