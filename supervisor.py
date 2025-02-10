@@ -6,13 +6,6 @@ import json
 
 MODEL = "llama3.1:70b"
 
-# state of the world
-class World(BaseModel):
-    agents: list["Agent"] = []
-    items: list["Item"] = []
-    locations: list["Location"] = []
-    information: list["Information"] = []
-
 
 class Sword(BaseModel):
     type: Literal["Sword"] = "Sword"
