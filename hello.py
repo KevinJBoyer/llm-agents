@@ -28,9 +28,6 @@ class Knowledge(BaseModel):
     knowledge: Location
 
 
-r
-
-
 class Information(BaseModel):
     information: set[Knowledge]
 
@@ -118,7 +115,7 @@ def get_available_actions(agent: Agent):
 
     valid_location_knowledge = Enum(
         "valid_location_knowledge",
-        {l.item.type: l for l in agent.known_items},
+        {item.item.type: item.item.type for item in agent.known_items},
     )
 
     valid_ask_actions = create_model(
@@ -173,11 +170,11 @@ def main():
     print(response)
     # available_actions = get_available_actions(seeker_agent)
 
-    # print(available_actions.model_json_schema())
-    # print(seeker_agent.model_dump_json())
+    # print('available_actions:', available_actions.model_json_schema(), '\n')
+    # print('seeker_agent:', seeker_agent.model_dump_json(), '\n')
 
     selected_action = available_actions.model_validate_json(response)
-    print(selected_action.model_dump_json())
+    print('selected_action:', selected_action.model_dump_json(), '\n')
 
     # if response = {"action": "type": "ask_action"}
     # ...send this to the knower_agent
