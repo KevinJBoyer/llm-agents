@@ -161,32 +161,6 @@ class Agent(BaseModel):
     acquired_items: list[Item] = []
 
     def produce_next_action(self, available_actions, global_past_actions, rejection_reason: Optional[str] = None):
-        # add explicit handling for forced travel situations at the start
-        # TODO: this is a hack, still want to rely on the llm to make the right decision
-        if isinstance(self.motivation, SeekMotivation):
-            sought_item_type = self.motivation.item.item.type
-            known_location = next((
-                k.knowledge.location.lower()
-                for k in self.knowledge
-                if k.knowledge.of.item.type == sought_item_type
-            ), None)
-
-            if known_location and known_location != self.current_location:
-                # Force travel action when we know where our item is
-                for agent_name in self.known_agents:
-                    try:
-                        return json.dumps({
-                            "action": {
-                                "type": "travel_action",
-                                "location": known_location.upper(),
-                                "message": f"Going to {known_location} to find the {sought_item_type}.",
-                                "agent_to_talk_to": agent_name.upper(),
-                                "end_turn": True
-                            }
-                        })
-                    except:
-                        continue
-
         # look through past actions to find dialogue directed at this agent
         recent_dialogue = []
         for past_action in global_past_actions[-5:]:  # look at last 5 actions
